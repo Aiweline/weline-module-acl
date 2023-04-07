@@ -68,13 +68,13 @@ class RoleAccess extends \Weline\Framework\Database\Model
                     'not null',
                     '资源ID'
                 )
-                ->addForeignKey(
+                /*->addForeignKey(
                     'ROLE_ACCESS_ROLE_ID',
                     self::fields_ROLE_ID,
                     $this->getTable('role'),
                     Role::fields_ID,
                     true
-                )
+                )*/
                 ->addConstraints("primary key (role_id,source_id)")
                 ->create();
         }
