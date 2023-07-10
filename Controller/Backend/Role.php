@@ -48,6 +48,7 @@ class Role extends \Weline\Admin\Controller\BaseController
     function add()
     {
         if ($this->request->isGet()) {
+            $this->assign('action', $this->request->getUrlBuilder()->getBackendUrl('*/backend/role/add'));
             return $this->fetch('form');
         }
 
