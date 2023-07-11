@@ -103,7 +103,7 @@ class ControllerAttributes implements \Weline\Framework\Event\ObserverInterface
                 ->setType($type);
             $this->acl->beginTransaction();
             try {
-                $this->acl->insert($acl->getData(), $update_fields)->fetch();
+                $this->acl->insert($acl->getData(), ['source_id'])->fetch();
                 $this->acl->commit();
             } catch (\Exception $exception) {
                 $this->acl->rollBack();

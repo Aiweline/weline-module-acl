@@ -10,7 +10,7 @@ declare(strict_types=1);
  * 日期：2023/1/7 20:39:18
  */
 
-namespace Weline\Acl\Controller\Backend;
+namespace Weline\Acl\Controller\Backend\Acl;
 
 use Weline\Acl\Cache\AclCache;
 use Weline\Acl\Model\RoleAccess;
@@ -20,7 +20,7 @@ use Weline\Framework\App\Exception;
 use Weline\Framework\Exception\Core;
 use Weline\Framework\Manager\ObjectManager;
 
-#[\Weline\Framework\Acl\Acl('Weline_Acl::acl', '管理权限', 'mdi mdi-security', '访问控制权限管理')]
+#[\Weline\Framework\Acl\Acl('Weline_Acl::acl_role', '管理权限', 'mdi mdi-security', '访问控制权限管理', 'Weline_Acl::acl')]
 class Role extends \Weline\Admin\Controller\BaseController
 {
     private \Weline\Acl\Model\Role $role;
@@ -60,7 +60,7 @@ class Role extends \Weline\Admin\Controller\BaseController
             }
             try {
                 $this->role->setData($this->request->getPost())
-                    ->save(true, $this->role::fields_ROLE_NAME);
+                           ->save(true, $this->role::fields_ROLE_NAME);
             } catch (\Exception $exception) {
                 $this->getMessageManager()->addException($exception);
             }
@@ -160,7 +160,7 @@ class Role extends \Weline\Admin\Controller\BaseController
         $acls    = [];
         foreach ($acl_ids as $acl_id) {
             $acls[] = [
-                RoleAccess::fields_ROLE_ID => $role_id,
+                RoleAccess::fields_ROLE_ID   => $role_id,
                 RoleAccess::fields_SOURCE_ID => $acl_id,
             ];
         }
