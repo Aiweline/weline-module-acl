@@ -73,7 +73,7 @@ $themeConfig = \Weline\Framework\Manager\ObjectManager::getInstance(\Weline\Back
                                         </a>
                                     </li>
                                     <li class='breadcrumb-item'>
-                                        <a href="@backend-url('*/backend/role')">
+                                        <a href="@backend-url('*/backend/acl/role')">
                                             <lang>Acl角色管理</lang>
                                         </a>
                                     </li>
@@ -109,7 +109,7 @@ $themeConfig = \Weline\Framework\Manager\ObjectManager::getInstance(\Weline\Back
                                     <lang>分配权限</lang>
                                 </p>
                                 <div class='button-items mb-1 mt-1'>
-                                    <form action="@backend-url('*/backend/role/assign')" id="aclForm" method="post">
+                                    <form action="@backend-url('*/backend/acl/role/assign')" id="aclForm" method="post">
                                         <input type="hidden" name="role_id" value="{{assign_role.role_id}}">
                                         <button type='submit' id='save_button' class='btn btn-primary waves-effect waves-light'>
                                             <lang>保存</lang>
