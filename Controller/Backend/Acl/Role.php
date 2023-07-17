@@ -48,7 +48,7 @@ class Role extends \Weline\Admin\Controller\BaseController
     function add()
     {
         if ($this->request->isGet()) {
-            $this->assign('action', $this->request->getUrlBuilder()->getBackendUrl('*/backend/role/add'));
+            $this->assign('action', $this->request->getUrlBuilder()->getBackendUrl('*/backend/acl/role/add'));
             return $this->fetch('form');
         }
 
@@ -56,7 +56,7 @@ class Role extends \Weline\Admin\Controller\BaseController
             $role = $this->role->clear()->where($this->role::fields_ROLE_NAME, $this->request->getPost('role_name'))->find()->fetch();
             if ($role->getId()) {
                 $this->getMessageManager()->addWarning(__('角色已存在！'));
-                $this->assign('action', $this->request->getUrlBuilder()->getBackendUrl('*/backend/role/add'));
+                $this->assign('action', $this->request->getUrlBuilder()->getBackendUrl('*/backend/acl/role/add'));
                 return $this->fetch('form');
             }
             try {
@@ -83,7 +83,7 @@ class Role extends \Weline\Admin\Controller\BaseController
             if (!$role->getId()) {
                 $this->getMessageManager()->addWarning(__('角色已不存在！'));
             } else {
-                $this->assign('action', $this->request->getUrlBuilder()->getBackendUrl('*/backend/role/edit'));
+                $this->assign('action', $this->request->getUrlBuilder()->getBackendUrl('*/backend/acl/role/edit'));
                 $this->assign('edit_role', $role);
             }
             return $this->fetch('form');
@@ -128,7 +128,7 @@ class Role extends \Weline\Admin\Controller\BaseController
         $role = clone $this->role->load($id);
         if (!$role->getId()) {
             $this->getMessageManager()->addWarning(__('角色已不存在！'));
-            $this->redirect('*/backend/role');
+            $this->redirect('*/backend/acl/role');
         } else {
             $this->assign('assign_role', $role->getData());
         }
