@@ -65,7 +65,7 @@ class Role extends \Weline\Admin\Controller\BaseController
             } catch (\Exception $exception) {
                 $this->getMessageManager()->addException($exception);
             }
-            $this->redirect('*/backend/role');
+            $this->redirect('*/backend/acl/role');
         } else {
             $this->redirect(404);
         }
@@ -90,7 +90,7 @@ class Role extends \Weline\Admin\Controller\BaseController
         }
         if ($this->request->isPost()) {
             $this->role->save($this->request->getPost());
-            $this->redirect('*/backend/role');
+            $this->redirect('*/backend/acl/role');
         } else {
             $this->redirect(404);
         }
@@ -113,7 +113,7 @@ class Role extends \Weline\Admin\Controller\BaseController
         } catch (\ReflectionException|Exception|Core $e) {
             $this->getMessageManager()->addException($e);
         }
-        $this->redirect('*/backend/role');
+        $this->redirect('*/backend/acl/role');
     }
 
     #[\Weline\Framework\Acl\Acl('Weline_Acl::acl_role_assign', '权限分配', '', '')]
@@ -155,7 +155,7 @@ class Role extends \Weline\Admin\Controller\BaseController
         $role    = $this->role->clear()->load($role_id);
         if (empty($role->getId())) {
             $this->getMessageManager()->addError(__('角色ID不存在！'));
-            $this->redirect('*/backend/role');
+            $this->redirect('*/backend/acl/role');
         }
         $acl_ids = $this->request->getPost('ids', []);
         $acls    = [];
@@ -187,7 +187,7 @@ class Role extends \Weline\Admin\Controller\BaseController
             }
             $this->getMessageManager()->addError(__('权限分配失败！'));
         }
-        $this->redirect('*/backend/role/assign', ['id' => $role_id]);
+        $this->redirect('*/backend/acl/role/assign', ['id' => $role_id]);
     }
 
 }
