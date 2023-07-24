@@ -13,6 +13,8 @@ declare(strict_types=1);
 namespace Weline\Acl\Plugin;
 
 use Weline\Acl\Model\Acl;
+use Weline\Framework\Manager\ObjectManager;
+use Weline\Framework\Setup\Db\Setup;
 
 class ModuleUpgradeExecuteAfterPlugin
 {
@@ -25,6 +27,10 @@ class ModuleUpgradeExecuteAfterPlugin
     }
     function beforeExecute()
     {
-        $this->acl->query("TRUNCATE TABLE {$this->acl->getTable()}");
+        /**@var Setup $setup*/
+        $setup = ObjectManager::getInstance(Setup::class);
+        if($setup->setConnection($this->acl->getConnection())->tableExist($this->acl->getTable())){
+            $this->acl->query("TRUNCATE TABLE {$this->acl->getTable()}");
+        }
     }
 }
