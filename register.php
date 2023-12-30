@@ -15,5 +15,5 @@ Register::register(
     __DIR__,
     '1.0.1',
     '<a href="https://bbs.aiweline.com">权限控制器</a>',
-    ['Weline_Backend', 'Weline_Admin']
+    ['Weline_Framework']
 );
