@@ -12,10 +12,12 @@ declare(strict_types=1);
 
 namespace Weline\Acl\Taglib;
 
+use Weline\Acl\Cache\AclCache;
 use Weline\Acl\Model\RoleAccess;
 use Weline\Backend\Model\BackendUser;
 use Weline\Backend\Session\BackendSession;
 use Weline\Framework\App\Session\FrontendSession;
+use Weline\Framework\Cache\CacheInterface;
 use Weline\Framework\Http\Request;
 use Weline\Framework\Manager\MessageManager;
 use Weline\Framework\Manager\ObjectManager;
@@ -85,19 +87,27 @@ class Acl implements TaglibInterface
             $user = $session->getLoginUser();
             // 角色
             $role = $user->getRoleModel();
-            if (empty($role->getId())) {
-                /**@var MessageManager $messageManager */
-                $messageManager = ObjectManager::getInstance(MessageManager::class);
-                $messageManager->addError('没有角色:无法访问 ' . $source . ' 资源');
-                return '<!-- 没有角色:无法访问 ' . $source . ' 资源 -->';
+            /**@var CacheInterface $cache */
+            $cache = ObjectManager::getInstance(AclCache::class.'Factory');
+            $cacheKey = 'acl_' . $role.'_source';
+            $accesses = $cache->get($cacheKey);
+            if(!$accesses){
+                if (empty($role->getId())) {
+                    /**@var MessageManager $messageManager */
+                    $messageManager = ObjectManager::getInstance(MessageManager::class);
+                    $messageManager->addError('没有角色:无法访问 ' . $source . ' 资源');
+                    return '<!-- 没有角色:无法访问 ' . $source . ' 资源 -->';
+                }
+                // 检查权限资源
+                /**@var RoleAccess $roleAccess */
+                $roleAccess = ObjectManager::getInstance(RoleAccess::class);
+                $accesses   = $roleAccess->getRoleAccessListArray($role);
+                foreach ($accesses as &$access) {
+                    $access = $access['source_id'];
+                }
+                $cache->set($cacheKey, $accesses);
             }
-            // 检查权限资源
-            /**@var RoleAccess $roleAccess */
-            $roleAccess = ObjectManager::getInstance(RoleAccess::class);
-            $accesses   = $roleAccess->getRoleAccessListArray($role);
-            foreach ($accesses as &$access) {
-                $access = $access['source_id'];
-            }
+            
             if (!in_array($source, $accesses)) {
                 /**@var MessageManager $messageManager */
                 $messageManager = ObjectManager::getInstance(MessageManager::class);
