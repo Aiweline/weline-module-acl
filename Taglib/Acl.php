@@ -87,15 +87,18 @@ class Acl implements TaglibInterface
             $user = $session->getLoginUser();
             // 角色
             $role = $user->getRoleModel();
+            if($role->getId()===1){
+                return $tag_data[2] ?? '';
+            }
             /**@var CacheInterface $cache */
             $cache = ObjectManager::getInstance(AclCache::class.'Factory');
-            $cacheKey = 'acl_' . $role.'_source';
+            $cacheKey = 'acl_' . $role->getId().'_source';
             $accesses = $cache->get($cacheKey);
             if(!$accesses){
                 if (empty($role->getId())) {
                     /**@var MessageManager $messageManager */
                     $messageManager = ObjectManager::getInstance(MessageManager::class);
-                    $messageManager->addError('没有角色:无法访问 ' . $source . ' 资源');
+                    $messageManager->addWarning('没有权限:无法访问 ' . $source . ' 资源,如有需求请联系管理员！');
                     return '<!-- 没有角色:无法访问 ' . $source . ' 资源 -->';
                 }
                 // 检查权限资源
@@ -107,11 +110,11 @@ class Acl implements TaglibInterface
                 }
                 $cache->set($cacheKey, $accesses);
             }
-            
+
             if (!in_array($source, $accesses)) {
                 /**@var MessageManager $messageManager */
                 $messageManager = ObjectManager::getInstance(MessageManager::class);
-                $messageManager->addError('没有权限:无法访问 ' . $source . ' 资源');
+                $messageManager->addWarning('没有权限:无法访问 ' . $source . ' 资源,如有需求请联系管理员！');
                 return '<!-- 没有权限:无法访问 ' . $source . ' 资源 -->';
             }
             if (DEV) {
