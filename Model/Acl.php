@@ -34,11 +34,13 @@ class Acl extends \Weline\Framework\Database\Model
     public const fields_CLASS = 'class';
     public const fields_TYPE = 'type';
     public const fields_ICON = 'icon';
-    public const fields_IS_ENBAVLE = 'is_enable';
+    public const fields_IS_ENABLE = 'is_enable';
     public const fields_IS_BACKEND = 'is_backend';
 
 
     public const type_MENUS = 'menus';
+
+    public array $_unit_primary_keys = [self::fields_ACL_ID, self::fields_SOURCE_ID];
 
 
     private Url $url;
@@ -111,6 +113,16 @@ class Acl extends \Weline\Framework\Database\Model
         return $this->setData(self::fields_ICON, $icon);
     }
 
+    public function setIsEnable(bool $is_enable = true): static
+    {
+        return $this->setData(self::fields_IS_ENABLE, $is_enable);
+    }
+
+    public function setIsBackend(bool $is_backend = true): static
+    {
+        return $this->setData(self::fields_IS_BACKEND, $is_backend);
+    }
+
     public function getAclId(): int
     {
         return intval($this->getData(self::fields_ACL_ID));
@@ -181,6 +193,12 @@ class Acl extends \Weline\Framework\Database\Model
         return $url ?? '';
     }
 
+    public function isEnable(): bool
+    {
+        return (bool)$this->getData(self::fields_IS_ENABLE);
+    }
+
+
     public function isBackend(): bool
     {
         return (bool)$this->getData(self::fields_IS_BACKEND);
@@ -208,87 +226,89 @@ class Acl extends \Weline\Framework\Database\Model
      */
     public function install(ModelSetup $setup, Context $context): void
     {
-        if ($setup->tableExist())$setup->query('TRUNCATE TABLE ' . $this->getTable());
+        if ($setup->tableExist()){
+            $setup->query('TRUNCATE TABLE ' . $this->getTable());
+        }
 //        $setup->dropTable();
         if (!$setup->tableExist()) {
             $setup->createTable()
-                  ->addColumn(
-                      self::fields_ACL_ID,
-                      TableInterface::column_type_INTEGER,
-                      null, 'primary key auto_increment', 'ACL权限ID'
-                  )
-                  ->addColumn(
-                      self::fields_SOURCE_ID,
-                      TableInterface::column_type_VARCHAR,
-                      127, 'not null unique', 'ACL资源ID'
-                  )
-                  ->addColumn(
-                      self::fields_SOURCE_NAME,
-                      TableInterface::column_type_VARCHAR,
-                      255, 'not null', 'ACL资源名称'
-                  )
-                  ->addColumn(
-                      self::fields_DOCUMENT,
-                      TableInterface::column_type_TEXT,
-                      null, 'not null', 'ACL资源描述'
-                  )
-                  ->addColumn(
-                      self::fields_PARENT_SOURCE,
-                      TableInterface::column_type_VARCHAR,
-                      255, 'not null', 'ACL父级资源'
-                  )
-                  ->addColumn(
-                      self::fields_ROUTER,
-                      TableInterface::column_type_VARCHAR,
-                      60, 'not null', 'ACL路由前缀'
-                  )
-                  ->addColumn(
-                      self::fields_REWRITE,
-                      TableInterface::column_type_VARCHAR,
-                      255, 'default ""', 'ACL路由重写'
-                  )
-                  ->addColumn(
-                      self::fields_ROUTE,
-                      TableInterface::column_type_VARCHAR,
-                      255, '', 'ACL路由'
-                  )
-                  ->addColumn(
-                      self::fields_METHOD,
-                      TableInterface::column_type_VARCHAR,
-                      6, 'default ""', 'ACL路由请求方法'
-                  )
-                  ->addColumn(
-                      self::fields_MODULE,
-                      TableInterface::column_type_VARCHAR,
-                      255, 'not null', 'ACL模组'
-                  )
-                  ->addColumn(
-                      self::fields_CLASS,
-                      TableInterface::column_type_VARCHAR,
-                      255, 'not null', '控制器类'
-                  )
-                  ->addColumn(
-                      self::fields_TYPE,
-                      TableInterface::column_type_VARCHAR,
-                      120, 'not null', '类型'
-                  )
-                  ->addColumn(
-                      self::fields_IS_BACKEND,
-                      TableInterface::column_type_INTEGER,
-                      1, 'default 1', '是否后台'
-                  )
-                  ->addColumn(
-                      self::fields_ICON,
-                      TableInterface::column_type_VARCHAR,
-                      255, 'not null', '图片，可以是链接'
-                  )
-                  ->addColumn(
-                      self::fields_IS_ENBAVLE,
-                      TableInterface::column_type_SMALLINT,
-                      255, 'default 1', '是否允许'
-                  )
-                  ->addAdditional('ENGINE=MyIsam;')
-                  ->create();
+                ->addColumn(
+                    self::fields_ACL_ID,
+                    TableInterface::column_type_INTEGER,
+                    null, 'primary key auto_increment', 'ACL权限ID'
+                )
+                ->addColumn(
+                    self::fields_SOURCE_ID,
+                    TableInterface::column_type_VARCHAR,
+                    127, 'not null unique', 'ACL资源ID'
+                )
+                ->addColumn(
+                    self::fields_SOURCE_NAME,
+                    TableInterface::column_type_VARCHAR,
+                    255, 'not null', 'ACL资源名称'
+                )
+                ->addColumn(
+                    self::fields_DOCUMENT,
+                    TableInterface::column_type_TEXT,
+                    null, 'not null', 'ACL资源描述'
+                )
+                ->addColumn(
+                    self::fields_PARENT_SOURCE,
+                    TableInterface::column_type_VARCHAR,
+                    255, 'not null', 'ACL父级资源'
+                )
+                ->addColumn(
+                    self::fields_ROUTER,
+                    TableInterface::column_type_VARCHAR,
+                    60, 'not null', 'ACL路由前缀'
+                )
+                ->addColumn(
+                    self::fields_REWRITE,
+                    TableInterface::column_type_VARCHAR,
+                    255, 'default ""', 'ACL路由重写'
+                )
+                ->addColumn(
+                    self::fields_ROUTE,
+                    TableInterface::column_type_VARCHAR,
+                    255, '', 'ACL路由'
+                )
+                ->addColumn(
+                    self::fields_METHOD,
+                    TableInterface::column_type_VARCHAR,
+                    6, 'default ""', 'ACL路由请求方法'
+                )
+                ->addColumn(
+                    self::fields_MODULE,
+                    TableInterface::column_type_VARCHAR,
+                    255, 'not null', 'ACL模组'
+                )
+                ->addColumn(
+                    self::fields_CLASS,
+                    TableInterface::column_type_VARCHAR,
+                    255, 'not null', '控制器类'
+                )
+                ->addColumn(
+                    self::fields_TYPE,
+                    TableInterface::column_type_VARCHAR,
+                    120, 'not null', '类型'
+                )
+                ->addColumn(
+                    self::fields_IS_BACKEND,
+                    TableInterface::column_type_INTEGER,
+                    1, 'default 1', '是否后台'
+                )
+                ->addColumn(
+                    self::fields_ICON,
+                    TableInterface::column_type_VARCHAR,
+                    255, 'not null', '图片，可以是链接'
+                )
+                ->addColumn(
+                    self::fields_IS_ENABLE,
+                    TableInterface::column_type_SMALLINT,
+                    255, 'default 1', '是否允许'
+                )
+                ->addAdditional('ENGINE=MyIsam;')
+                ->create();
         }
     }
 }

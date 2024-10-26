@@ -45,7 +45,7 @@ class ControllerAttributes implements \Weline\Framework\Event\ObserverInterface
         $controller_attributes = $event->getData('controller_data/attributes');
         $update_fields = $this->acl->getModelFields();
         foreach ($update_fields as $key => $update_field) {
-            if (($this->acl::fields_ACL_ID === $update_field) || ($this->acl::fields_SOURCE_ID === $update_field)) {
+            if (($this->acl::fields_ACL_ID === $update_field) || ($this->acl::fields_SOURCE_ID === $update_field)  || ($this->acl::fields_CREATE_TIME === $update_field)|| ($this->acl::fields_UPDATE_TIME === $update_field)) {
                 unset($update_fields[$key]);
             }
         }
@@ -57,7 +57,7 @@ class ControllerAttributes implements \Weline\Framework\Event\ObserverInterface
                     /**@var \Weline\Framework\Acl\Acl $acl */
                     $acl = ObjectManager::make($controller_attribute->getName(), $controller_attribute->getArguments());
                     $route = explode('::', $data->getData('router'));
-                    if(count($route)>1){
+                    if (count($route) > 1) {
                         array_pop($route);
                     }
                     $route = implode('', $route);
@@ -66,10 +66,13 @@ class ControllerAttributes implements \Weline\Framework\Event\ObserverInterface
                         ->setRouter($data->getData('base_router'))
                         ->setClass($data->getData('class'))
                         ->setMethod($data->getData('request_method'))
+                        ->setIsEnable($data->getData('is_enable')?:true)
+                        ->setIsBackend($data->getData('is_backend')?:false)
                         ->setType($type);
+                    $this->acl->reset()->clearData();
                     $this->acl->beginTransaction();
                     try {
-                        $this->acl->insert($acl->getData(), $update_fields)->fetch();
+                        $this->acl->insert($acl->getData(), 'source_id')->fetch();
                         $this->acl->commit();
                     } catch (\Exception $exception) {
                         $this->acl->rollBack();
@@ -91,7 +94,7 @@ class ControllerAttributes implements \Weline\Framework\Event\ObserverInterface
                 $acl->setParentSource($parent_acl_source);
             }
             $route = explode('::', $data->getData('router'));
-            if(count($route)>1){
+            if (count($route) > 1) {
                 array_pop($route);
             }
             $route = implode('', $route);
@@ -101,9 +104,10 @@ class ControllerAttributes implements \Weline\Framework\Event\ObserverInterface
                 ->setClass($data->getData('class'))
                 ->setMethod($data->getData('request_method'))
                 ->setType($type);
+            $this->acl->insert($acl->getData(), 'source_id')->fetch();
             $this->acl->beginTransaction();
             try {
-                $this->acl->insert($acl->getData(), ['source_id'])->fetch();
+                $this->acl->insert($acl->getData(), 'source_id')->fetch();
                 $this->acl->commit();
             } catch (\Exception $exception) {
                 $this->acl->rollBack();
