@@ -76,7 +76,7 @@ class Acl implements TaglibInterface
         return function ($tag_key, $config, $tag_data, $attributes) {
             $source = $attributes['source'] ?? '';
             if (empty($source)) {
-                throw new \Exception('acl标签缺少source属性');
+                throw new \Exception(__('acl标签缺少source属性'));
             }
             // 判断当前前后后台环境
             /**@var Request $request */
@@ -98,8 +98,9 @@ class Acl implements TaglibInterface
                 if (empty($role->getId())) {
                     /**@var MessageManager $messageManager */
                     $messageManager = ObjectManager::getInstance(MessageManager::class);
-                    $messageManager->addWarning('没有权限:无法访问 ' . $source . ' 资源,如有需求请联系管理员！');
-                    return '<!-- 没有角色:无法访问 ' . $source . ' 资源 -->';
+                    $msg = __('该页面部分资源引用了权限设置，但是您当前没有权限:无法访问 %1 资源,如有需求请联系管理员！',$source);
+                    $messageManager->addWarning($msg);
+                    return '<!-- ' . $msg . ' 资源 -->';
                 }
                 // 检查权限资源
                 /**@var RoleAccess $roleAccess */
@@ -110,12 +111,12 @@ class Acl implements TaglibInterface
                 }
                 $cache->set($cacheKey, $accesses);
             }
-
             if (!in_array($source, $accesses)) {
                 /**@var MessageManager $messageManager */
                 $messageManager = ObjectManager::getInstance(MessageManager::class);
-                $messageManager->addWarning('没有权限:无法访问 ' . $source . ' 资源,如有需求请联系管理员！');
-                return '<!-- 没有权限:无法访问 ' . $source . ' 资源 -->';
+                $msg = __('该页面部分资源引用了权限设置，但是您当前没有权限:无法访问 %1 资源,如有需求请联系管理员！',$source);
+                $messageManager->addWarning($msg);
+                return '<!-- ' . $msg . ' 资源 -->';
             }
             if (DEV) {
                 return '<!-- -----开发环境显示acl标签---------START -->' . ($tag_data[0] ?? '') . PHP_EOL.'<!-- -----开发环境显示acl标签---------END -->';
@@ -142,16 +143,12 @@ class Acl implements TaglibInterface
 
     static function document(): string
     {
-        $tag = htmlentities('<acl source="Weline_Backend::setting">
+        $msg = __('这里是重要信息，只允许拥有Weline_Backend::setting权限的用户访问');
+        $tag = __('使用示例：').htmlentities('<acl source="Weline_Backend::setting">
     <div>
-        <span>这里是重要信息，只允许拥有Weline_Backend::setting权限的用户访问</span>
+        <span>' . $msg . '</span>
     </div>
 </acl>');
-        return <<<DOC
-使用示例：
-$tag
-
-DOC;
-
+        return $tag;
     }
 }

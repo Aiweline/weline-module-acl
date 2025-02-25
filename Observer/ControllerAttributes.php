@@ -45,7 +45,7 @@ class ControllerAttributes implements \Weline\Framework\Event\ObserverInterface
         $controller_attributes = $event->getData('controller_data/attributes');
         $update_fields = $this->acl->getModelFields();
         foreach ($update_fields as $key => $update_field) {
-            if (($this->acl::fields_ACL_ID === $update_field) || ($this->acl::fields_SOURCE_ID === $update_field)  || ($this->acl::fields_CREATE_TIME === $update_field)|| ($this->acl::fields_UPDATE_TIME === $update_field)) {
+            if (($this->acl::fields_ACL_ID === $update_field) || ($this->acl::fields_SOURCE_ID === $update_field) || ($this->acl::fields_CREATE_TIME === $update_field) || ($this->acl::fields_UPDATE_TIME === $update_field)) {
                 unset($update_fields[$key]);
             }
         }
@@ -66,8 +66,8 @@ class ControllerAttributes implements \Weline\Framework\Event\ObserverInterface
                         ->setRouter($data->getData('base_router'))
                         ->setClass($data->getData('class'))
                         ->setMethod($data->getData('request_method'))
-                        ->setIsEnable($data->getData('is_enable')?:true)
-                        ->setIsBackend($data->getData('is_backend')?:false)
+                        ->setIsEnable($data->getData('is_enable') ?: true)
+                        ->setIsBackend($data->getData('is_backend') ?: false)
                         ->setType($type);
                     $this->acl->reset()->clearData();
                     $this->acl->beginTransaction();
@@ -92,6 +92,10 @@ class ControllerAttributes implements \Weline\Framework\Event\ObserverInterface
             // 如果没有自己的父级，且本控制器有acl权限注解控制则使用控制器级别的acl资源作为子方法的父级资源
             if (empty($acl->getParentSource())) {
                 $acl->setParentSource($parent_acl_source);
+            }
+            # 如果资源ID和父级资源ID相同则不插入数据
+            if ($acl->getSourceId() === $acl->getParentSource()) {
+                throw new \Exception(__('资源ID和父级资源ID不能相同，请检查! 资源ID: %1, 父级资源ID: %2', [$acl->getSourceId(), $acl->getParentSource()]));
             }
             $route = explode('::', $data->getData('router'));
             if (count($route) > 1) {
