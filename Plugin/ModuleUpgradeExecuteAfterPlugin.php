@@ -12,25 +12,19 @@ declare(strict_types=1);
  */
 namespace Weline\Acl\Plugin;
 
-use Weline\Acl\Model\Acl;
-use Weline\Framework\Manager\ObjectManager;
-use Weline\Framework\Setup\Db\Setup;
-
 class ModuleUpgradeExecuteAfterPlugin
 {
-    private Acl $acl;
-    function __construct(
-        Acl $acl
-    )
+    /**
+     * 模块升级前的 ACL 处理入口。
+     *
+     * 菜单与权限统一采用增量同步，禁止 TRUNCATE 清表。
+     * 
+     * @param mixed $subject Upgrade 实例
+     * @param array ...$args execute 方法的参数 [$args, $data]
+     */
+    function beforeExecute($subject, ...$args)
     {
-        $this->acl = $acl;
-    }
-    function beforeExecute()
-    {
-        /**@var Setup $setup*/
-        $setup = ObjectManager::getInstance(Setup::class);
-        if($setup->setConnection($this->acl->getConnection())->tableExist($this->acl->getTable())){
-            $this->acl->query("TRUNCATE TABLE {$this->acl->getTable()}");
-        }
+        // ACL 改为由增量同步维护，禁止升级阶段执行 TRUNCATE。
+        return;
     }
 }

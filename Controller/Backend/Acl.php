@@ -21,13 +21,19 @@ class Acl extends \Weline\Admin\Controller\BaseController
     {
         /**@var \Weline\Acl\Model\Acl $aclModel*/
         $aclModel = ObjectManager::getInstance(\Weline\Acl\Model\Acl::class);
-        if($search = $this->request->getGet('search')){
-            $aclModelFields = implode(',', $aclModel->getModelFields());
-            $aclModel->where('CONCAT('.$aclModelFields.')','%'.$search.'%','like');
+        if ($search = $this->request->getGet('search')) {
+            $connector = $aclModel->getConnection()->getConnector();
+            $quotedFields = array_map(
+                fn(string $f): string => $connector->quoteIdentifier($f),
+                $aclModel->getModelFields()
+            );
+            $aclModel->where('CONCAT(' . implode(',', $quotedFields) . ')', '%' . $search . '%', 'like');
         }
         $aclModel->pagination()->select()->fetch();
         $this->assign('acls',$aclModel->getItems());
-        $this->assign('pagination',$aclModel->getPagination());
+        // pagination() 内会预渲染分页 HTML；WLS 下区域偶发误判时 getUrl 会走前台前缀，需强制后台地址
+        unset($aclModel->pagination['html']);
+        $this->assign('pagination', $aclModel->getPagination('pagination-rounded', '*/backend/acl', true));
         return $this->fetch('index');
     }
 }

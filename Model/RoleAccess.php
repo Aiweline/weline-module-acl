@@ -14,72 +14,44 @@ declare(strict_types=1);
 namespace Weline\Acl\Model;
 
 use Weline\Backend\Model\BackendUser;
-use Weline\Backend\Model\Menu;
-use Weline\Backend\Session\BackendSession;
-use Weline\Framework\Database\Api\Db\Ddl\TableInterface;
+use Weline\Framework\Session\Auth\AuthenticatedSessionInterface;
+use Weline\Framework\Session\SessionFactory;
 use Weline\Framework\Database\Model;
+use Weline\Framework\Database\Schema\Attribute\Col;
+use Weline\Framework\Database\Schema\Attribute\Index;
+use Weline\Framework\Database\Schema\Attribute\Table;
 use Weline\Framework\Manager\ObjectManager;
-use Weline\Framework\Setup\Data\Context;
-use Weline\Framework\Setup\Db\ModelSetup;
+use Weline\Acl\Service\ResourceTreeService;
 
-class RoleAccess extends \Weline\Framework\Database\Model
+/** 复合主键 (role_id, source_id) 用 UNIQUE 约束实现，框架暂不支持复合主键声明 */
+#[Table(comment: '角色资源访问表')]
+#[Index(name: 'uk_role_source', columns: ['role_id', 'source_id'], type: 'UNIQUE', comment: '角色+资源唯一')]
+class RoleAccess extends Model
 {
-    public const fields_ID = 'role_id';
-    public const fields_ROLE_ID = Role::fields_ID;
-    public const fields_SOURCE_ID = Acl::fields_ID;
+
+    #[Col(type: 'int', nullable: false, comment: '角色ID')]
+    public const schema_fields_ID = 'role_id';
+    #[Col(type: 'int', nullable: false, comment: '角色ID')]
+    public const schema_fields_ROLE_ID = 'role_id';
+    #[Col(type: 'varchar', length: 255, nullable: false, comment: '资源ID')]
+    public const schema_fields_SOURCE_ID = 'source_id';
 
     private array $exist = [];
+    
+    private ?ResourceTreeService $resourceTreeService = null;
 
     /**
-     * @inheritDoc
+     * 获取资源树服务（延迟加载）
+     * 
+     * @return ResourceTreeService
      */
-    public function setup(ModelSetup $setup, Context $context): void
+    private function getResourceTreeService(): ResourceTreeService
     {
-        $this->install($setup, $context);
-    }
-
-    /**
-     * @inheritDoc
-     */
-    public function upgrade(ModelSetup $setup, Context $context): void
-    {
-        // TODO: Implement upgrade() method.
-    }
-
-    /**
-     * @inheritDoc
-     */
-    public function install(ModelSetup $setup, Context $context): void
-    {
-//        $setup->dropTable();
-        if (!$setup->tableExist()) {
-            $setup->createTable()
-                ->addColumn(
-                    self::fields_ROLE_ID,
-                    TableInterface::column_type_INTEGER,
-                    null,
-                    'not null',
-                    '角色ID'
-                )
-                ->addColumn(
-                    self::fields_SOURCE_ID,
-                    TableInterface::column_type_VARCHAR,
-                    255,
-                    'not null',
-                    '资源ID'
-                )
-                /*->addForeignKey(
-                    'ROLE_ACCESS_ROLE_ID',
-                    self::fields_ROLE_ID,
-                    $this->getTable('role'),
-                    Role::fields_ID,
-                    true
-                )*/
-                ->addConstraints("primary key (role_id,source_id)")
-                ->create();
+        if ($this->resourceTreeService === null) {
+            $this->resourceTreeService = ObjectManager::getInstance(ResourceTreeService::class);
         }
+        return $this->resourceTreeService;
     }
-
 
     /**
      * @DESC          # 获取树形菜单【携带角色权限信息】
@@ -106,19 +78,18 @@ class RoleAccess extends \Weline\Framework\Database\Model
         string     $order_sort = 'ASC'
     ): array
     {
-        $main_field = $main_field ?: $this::fields_ID;
-        $top_menus = $this->clearData()
-            ->joinModel(Acl::class, 'a', 'a.source_id=main_table.source_id and main_table.role_id=' . $role->getId(''), 'right')
-            ->where($parent_id_field, $parent_id_value)
-            ->order($order_field, $order_sort)
-            ->select()
-            ->fetch()
-            ->getItems();
-        foreach ($top_menus as &$top_menu) {
-            $top_menu->setData('source_id', $top_menu->getData('a_source_id'));
-            $top_menu = $this->getSubsWithRole($role, $top_menu, $main_field, $parent_id_field, $order_field, $order_sort);
-        }
-        return $top_menus;
+        return $this->buildAclTreeFromAcl($role);
+    }
+
+    /**
+     * 从 ACL 表构建权限分配树（单一数据源）
+     * 
+     * @param Role $role
+     * @return Acl[]
+     */
+    private function buildAclTreeFromAcl(Role $role): array
+    {
+        return $this->getResourceTreeService()->getAclAssignmentTree($role);
     }
 
     /**
@@ -160,7 +131,7 @@ class RoleAccess extends \Weline\Framework\Database\Model
         string $order_sort = 'ASC'
     ): Model
     {
-        $main_field = $main_field ?: $this::fields_ID;
+        $main_field = $main_field ?: $this::schema_fields_ID;
         $model->setData('source_id', $model->getData('a_source_id'));
         if ($subs = $this->clear()
             ->joinModel(Acl::class, 'a', 'a.source_id=main_table.source_id and main_table.role_id=' . $role->getId(''), 'right')
@@ -190,7 +161,9 @@ class RoleAccess extends \Weline\Framework\Database\Model
 
     public function getRoleAccessList(Role $roleModel): array
     {
-        return $this->joinModel($roleModel, 'r', 'main_table.role_id=r.role_id')
+        // WLS 兼容：清除上一请求的查询状态，避免 role_id 混用导致非超管只看到部分权限
+        return $this->clear()
+            ->joinModel($roleModel, 'r', 'main_table.role_id=r.role_id')
             ->joinModel(Acl::class, 'a', 'main_table.source_id=a.source_id')
             ->where('main_table.role_id', $roleModel->getId())
             ->select()
@@ -199,10 +172,158 @@ class RoleAccess extends \Weline\Framework\Database\Model
 
     public function getRoleAccessListArray(Role $roleModel): array
     {
-        return $this->joinModel($roleModel, 'r', 'main_table.role_id=r.role_id')
+        // WLS 兼容：清除上一请求的查询状态
+        return $this->clear()
+            ->joinModel($roleModel, 'r', 'main_table.role_id=r.role_id')
             ->joinModel(Acl::class, 'a', 'main_table.source_id=a.source_id')
             ->where('main_table.role_id', $roleModel->getId())
             ->select()
             ->fetchArray();
     }
+
+    /**
+     * 按角色 ID 获取角色 ACL 条目列表（不加载 Role 模型，减少一次 DB 查询）
+     * 用于 AclService 请求级缓存路径，与 getRoleAccessListArray 返回结构一致。
+     */
+    public function getRoleAccessListArrayByRoleId(int $roleId): array
+    {
+        if ($roleId <= 0) {
+            return [];
+        }
+        // WLS 模式下使用新实例避免状态污染（JOIN/WHERE 条件残留）
+        /** @var RoleAccess $freshInstance */
+        $freshInstance = \Weline\Framework\Manager\ObjectManager::getInstance(self::class, [], false);
+        return $freshInstance
+            ->joinModel(Acl::class, 'a', 'main_table.source_id=a.source_id')
+            ->where('main_table.role_id', $roleId)
+            ->select()
+            ->fetchArray();
+    }
+
+    /**
+     * 获取权限树统计信息（按顶级节点分组）
+     * 
+     * @param Role $role 角色对象
+     * @return array 统计信息数组，格式为 ['source_id' => ['total' => 总数, 'selected' => 已选数, 'module' => 模块名]]
+     */
+    public function getTreeStatistics(Role $role): array
+    {
+        $trees = $this->clear()->getTreeWithRole($role);
+        $statistics = [];
+        
+        foreach ($trees as $tree) {
+            $sourceId = $tree->getSourceId();
+            $stats = $this->countNodeStatistics($tree);
+            $module = $this->extractModuleFromSourceId($sourceId);
+            
+            $statistics[$sourceId] = [
+                'source_id' => $sourceId,
+                'source_name' => $tree->getSourceName(),
+                'module' => $module,
+                'type' => $tree->getType(),
+                'total' => $stats['total'],
+                'selected' => $stats['selected'],
+            ];
+        }
+        
+        return $statistics;
+    }
+
+    /**
+     * 递归统计节点的总数和已选数
+     * 
+     * @param Model $node 节点
+     * @return array ['total' => 总数, 'selected' => 已选数]
+     */
+    private function countNodeStatistics(Model $node): array
+    {
+        $total = 1;
+        $selected = $node->getData('role_id') ? 1 : 0;
+        
+        $subs = $node->getSub();
+        if (!empty($subs)) {
+            foreach ($subs as $sub) {
+                $subStats = $this->countNodeStatistics($sub);
+                $total += $subStats['total'];
+                $selected += $subStats['selected'];
+            }
+        }
+        
+        return ['total' => $total, 'selected' => $selected];
+    }
+
+    /**
+     * 从 source_id 中提取模块名
+     * 例如: Weline_Acl::acl_role => Weline_Acl
+     * 
+     * @param string $sourceId
+     * @return string
+     */
+    private function extractModuleFromSourceId(string $sourceId): string
+    {
+        if (str_contains($sourceId, '::')) {
+            return explode('::', $sourceId)[0];
+        }
+        return $sourceId;
+    }
+
+    /**
+     * 获取所有模块列表（用于筛选器）
+     * 
+     * @return array
+     */
+    public function getModuleList(): array
+    {
+        $aclModel = ObjectManager::getInstance(Acl::class);
+        // PostgreSQL 严格要求 SELECT 的非聚合列必须在 GROUP BY 中
+        // 只查询 module 列，GROUP BY module 即可
+        $acls = $aclModel->clear()
+            ->fields('module')
+            ->where('module', '', '!=')
+            ->group('module')
+            ->order('module', 'ASC')
+            ->select()
+            ->fetch()
+            ->getItems();
+        
+        $modules = [];
+        foreach ($acls as $acl) {
+            $module = $acl->getModule();
+            if (!empty($module)) {
+                $modules[] = $module;
+            }
+        }
+        
+        return $modules;
+    }
+
+    /**
+     * 获取所有权限类型列表（用于筛选器）
+     * 
+     * @return array
+     */
+    public function getTypeList(): array
+    {
+        $aclModel = ObjectManager::getInstance(Acl::class);
+        // 只查询 type 列，GROUP BY type 即可
+        $acls = $aclModel->clear()
+            ->fields('type')
+            ->where('type', '', '!=')
+            ->group('type')
+            ->order('type', 'ASC')
+            ->select()
+            ->fetch()
+            ->getItems();
+        
+        $types = [];
+        foreach ($acls as $acl) {
+            $type = $acl->getType();
+            if (!empty($type)) {
+                $types[] = $type;
+            }
+        }
+        
+        return $types;
+    }
 }
+
